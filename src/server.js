@@ -1,12 +1,14 @@
 import { join } from "path";
 import express from "express";
 import socketIO from "socket.io";
+import logger from "morgan";
 
 const PORT = 4000;
 
 const app = express();
 app.set("view engine", "pug");
 app.set("views", join(__dirname, "views"));
+app.use(logger("dev"));
 app.use(express.static(join(__dirname, "static")));
 
 app.get("/", (req, res) => res.render("home"));
@@ -18,3 +20,15 @@ const handleListening = () => {
 const server = app.listen(PORT, handleListening);
 
 const io = socketIO(server);
+
+io.on("connection", (socket) => {
+  socket.on("newMessage", (data) => {
+    const { message } = data;
+    const nickname = socket.nickname || "Anon";
+    socket.broadcast.emit("receiveMessage", { nickname, message });
+  });
+  socket.on("setNickname", (data) => {
+    const { nickname } = data;
+    socket.nickname = nickname;
+  });
+});
